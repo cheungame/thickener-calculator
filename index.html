@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>凝固粉用量計算機 (Thickened Liquid Calculator)</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3b82f6">
+<link rel="apple-touch-icon" href="icon.png">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js');
+    });
+  }
+</script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+        }
+        .calculator-card {
+            max-width: 500px;
+            width: 100%;
+        }
+        /* Custom focus styles for better accessibility */
+        select:focus, input:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            --tw-ring-color: #3b82f6; /* A nice blue ring color */
+            --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+            --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+            box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="calculator-card bg-white p-6 sm:p-8 rounded-xl shadow-lg">
+        <div class="text-center mb-6">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">凝固粉用量計算機</h1>
+            <p class="text-gray-500 mt-1">Thickened Liquid Calculator</p>
+        </div>
+
+        <div class="space-y-4">
+            <!-- Thickener Brand Selection -->
+            <div>
+                <label for="thickener-brand" class="block text-sm font-medium text-gray-700 mb-1">1. 選擇凝固粉牌子 (Select Thickener)</label>
+                <select id="thickener-brand" class="mt-1 block w-full pl-3 pr-10 py-2.5 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md shadow-sm">
+                    <option>Nestle ThickenUP 快凝寶</option>
+                    <option>Nestle ThickenUP 快凝寶 清透配方</option>
+                    <option>THICK & EASY ORIGINAL 凝固樂</option>
+                    <option>THICK & EASY CLEAR 凝固樂 清透配方</option>
+                    <option>吞樂美</option>
+                    <option>Thick-It 凝固寶</option>
+                </select>
+            </div>
+
+            <!-- Liquid Volume Input -->
+            <div>
+                <label for="liquid-volume" class="block text-sm font-medium text-gray-700 mb-1">2. 輸入流質份量 (Enter Liquid Volume)</label>
+                <div class="relative mt-1">
+                    <input type="number" id="liquid-volume" value="200" min="1" class="w-full pl-3 pr-12 py-2.5 border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md shadow-sm" placeholder="例如: 200">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <span class="text-gray-500 sm:text-sm">毫升 (ml)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- IDDSI Level Selection -->
+            <div>
+                <label for="iddsi-level" class="block text-sm font-medium text-gray-700 mb-1">3. 選擇 IDDSI 稠度 (Select IDDSI Level)</label>
+                <select id="iddsi-level" class="mt-1 block w-full pl-3 pr-10 py-2.5 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md shadow-sm">
+                    <option value="1">1 極微杰 (Slightly Thick)</option>
+                    <option value="2">2 低度杰 (Mildly Thick)</option>
+                    <option value="3">3 中度杰 (Moderately Thick)</option>
+                    <option value="4">4 高度杰 (Extremely Thick)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Result Display -->
+        <div class="mt-8 text-center bg-blue-50 p-6 rounded-lg">
+            <p class="text-sm font-medium text-blue-800">所需匙數 (Required Scoops)</p>
+            <p id="result" class="text-3xl sm:text-4xl font-bold text-blue-600 mt-2">-</p>
+        </div>
+
+        <!-- Note Section -->
+        <div class="mt-6 text-xs text-gray-500 bg-gray-50 p-3 rounded-md">
+            <p><span class="font-bold">注意:</span> 以上配匙用量只適用於煮沸後的開水。調配其他飲品時,凝固粉的用量有機會因流質成份或稠度而有所增減。如有疑問,可參閱IDDSI 測試方法或向言語治療師查詢。</p>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA FROM THE POSTER ---
+        // This data is based on a 200ml liquid volume.
+        // For Thick-It, we use the small spoon (小匙) as the base unit (1 large = 3 small).
+        const thickenerData = {
+            'Nestle ThickenUP 快凝寶': { 1: 2, 2: 2.5, 3: 3, 4: 3.5 },
+            'Nestle ThickenUP 快凝寶 清透配方': { 1: 1, 2: 2, 3: 4, 4: 6 },
+            'THICK & EASY ORIGINAL 凝固樂': { 1: 5, 2: 6, 3: 7, 4: 8 },
+            'THICK & EASY CLEAR 凝固樂 清透配方': { 1: 1, 2: 2, 3: 3, 4: 6 }, // Note: Poster has '5' for level 4, but THICK&EASY clear is usually higher. Assuming '6' based on typical progression. Let's stick to poster, it says 5. I will correct it. It says 6 for level 4 for 'THICK & EASY CLEAR'. Let me re-read the poster. Ah, the user-provided transcription was wrong. The image shows: 1->1, 2->2, 3->3, 4->6. The other brand is 1->5, 2->6, 3->7, 4->8. OK. Let's re-verify: 'THICK & EASY CLEAR 凝固樂 清透配方' Level 4 says '6' in the user's text transcription. And '吞樂美' level 4 says '5'. Ok, the text was right. My bad. It's 'THICK & EASY CLEAR' level 4 -> 6 and '吞樂美' level 4 -> 5.
+            '吞樂美': { 1: 1, 2: 2, 3: 3, 4: 5 },
+            'Thick-It 凝固寶': { 1: 6, 2: 7, 3: 9, 4: 10 } // 2大=6小, 2大1小=7小, 3大=9小, 3大1小=10小
+        };
+
+        // --- DOM ELEMENTS ---
+        const brandSelect = document.getElementById('thickener-brand');
+        const volumeInput = document.getElementById('liquid-volume');
+        const levelSelect = document.getElementById('iddsi-level');
+        const resultDisplay = document.getElementById('result');
+
+        // --- CALCULATION LOGIC ---
+        function calculate() {
+            const brand = brandSelect.value;
+            const volume = parseFloat(volumeInput.value);
+            const level = levelSelect.value;
+
+            // Validate inputs
+            if (!brand || !volume || volume <= 0 || !level) {
+                resultDisplay.textContent = "-";
+                return;
+            }
+
+            // Get the base scoops for 200ml
+            const baseScoops = thickenerData[brand][level];
+            const ratio = volume / 200.0;
+            const finalScoops = baseScoops * ratio;
+
+            // Special formatting for "Thick-It"
+            if (brand === 'Thick-It 凝固寶') {
+                const totalSmallSpoons = finalScoops;
+                const largeSpoons = Math.floor(totalSmallSpoons / 3);
+                const smallSpoons = totalSmallSpoons % 3;
+                
+                let resultText = '';
+                if (largeSpoons > 0) {
+                    resultText += `${largeSpoons} 大匙`;
+                }
+                if (smallSpoons > 0) {
+                     // Add a space if large spoons were also added
+                    if(resultText.length > 0) resultText += ' ';
+                    resultText += `${Math.round(smallSpoons * 10) / 10} 小匙`;
+                }
+                 if (resultText.length === 0) resultText = "0 匙"; // Handle case where result is 0
+                resultDisplay.textContent = resultText;
+
+            } else {
+                 // For all other brands
+                resultDisplay.textContent = `${Math.round(finalScoops * 10) / 10} 匙`;
+            }
+        }
+
+        // --- EVENT LISTENERS ---
+        brandSelect.addEventListener('change', calculate);
+        volumeInput.addEventListener('input', calculate);
+        levelSelect.addEventListener('change', calculate);
+
+        // --- INITIAL CALCULATION on page load ---
+        window.onload = calculate;
+    </script>
+
+</body>
+</html>
